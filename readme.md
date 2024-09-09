@@ -6,6 +6,11 @@
 
 This is a simple PHP WHOIS lookup tool that allows users to query WHOIS information for domain names or IP addresses. The tool provides a user-friendly interface, supports multiple languages, and features search history and screenshot functionality.
 
+## 在线演示 / Online Demo
+
+[https://whois.rw2.cc/](https://whois.rw2.cc/)
+
+
 ## 功能 / Features
 
 - WHOIS 信息查询 / WHOIS information lookup
