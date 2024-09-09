@@ -2,9 +2,9 @@
 
 ## 简介 / Introduction
 
-这是一个简单而强大的 WHOIS 查询工具，允许用户查询域名或 IP 地址的 WHOIS 信息。该工具提供了用户友好的界面，支持多语言，并具有历史记录和截图功能。
+这是一个简单的PHP WHOIS 查询工具，允许用户查询域名或 IP 地址的 WHOIS 信息。该工具提供了用户友好的界面，支持多语言，并具有历史记录和截图功能。
 
-This is a simple yet powerful WHOIS lookup tool that allows users to query WHOIS information for domain names or IP addresses. The tool provides a user-friendly interface, supports multiple languages, and features search history and screenshot functionality.
+This is a simple PHP WHOIS lookup tool that allows users to query WHOIS information for domain names or IP addresses. The tool provides a user-friendly interface, supports multiple languages, and features search history and screenshot functionality.
 
 ## 功能 / Features
 
