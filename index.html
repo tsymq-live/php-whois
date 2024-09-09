@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="title">WHOIS 查询</title>
+    <link rel="stylesheet" href="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/tailwindcss/2.2.19/tailwind.min.css">
+    <script src="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+    <script src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/clipboard.js/2.0.10/clipboard.min.js"></script>
+    <script src="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/i18next/21.6.12/i18next.min.js"></script>
+    <script src="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/jquery-i18next/1.2.1/jquery-i18next.min.js"></script>
+    <style>
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        @keyframes rotate {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-spinner {
+            animation: rotate 1.5s linear infinite;
+        }
+
+        .result-container {
+            scrollbar-width: thin;
+            scrollbar-color: #4B5563 #E5E7EB;
+        }
+
+        .result-container::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .result-container::-webkit-scrollbar-track {
+            background: #E5E7EB;
+        }
+
+        .result-container::-webkit-scrollbar-thumb {
+            background-color: #4B5563;
+            border-radius: 20px;
+            border: 3px solid #E5E7EB;
+        }
+
+        .history-card {
+            width: 300px;
+            max-height: 800px;
+            flex-direction: column;
+        }
+
+        .history-card>div {
+            scrollbar-width: thin;
+            scrollbar-color: #4B5563 #E5E7EB;
+        }
+
+        .history-card>div::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .history-card>div::-webkit-scrollbar-track {
+            background: #E5E7EB;
+        }
+
+        .history-card>div::-webkit-scrollbar-thumb {
+            background-color: #4B5563;
+            border-radius: 20px;
+            border: 2px solid #E5E7EB;
+        }
+
+        .watermark {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4B5563;
+            /* Tailwind's gray-600 */
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .language-switcher {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        @media (max-width: 640px) {
+            .result-container {
+                padding-bottom: 65px;
+            }
+        }
+    </style>
+    <!-- by: danran  -->
+    <!-- wechat: yyy5858588  -->
+    <!-- date: 2024-09-07  -->
+</head>
+
+<body class="bg-gray-100 flex justify-center p-0 sm:p-4 h-screen">
+    <div class="language-switcher">
+        <select id="languageSelect"
+            class="bg-white border border-gray-300 rounded-md text-gray-700 py-1 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="zh-CN">简体中文</option>
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ru">Русский</option>
+            <option value="es">Español</option>
+        </select>
+    </div>
+    <div class="flex flex-grow max-w-5xl w-full">
+        <div class="bg-white p-2 sm:p-6 md:p-8 rounded-lg shadow-md flex flex-col w-full h-full">
+            <h1 class="text-2xl sm:text-3xl font-bold text-left sm:text-center mb-4 sm:mb-6 text-gray-800"
+                data-i18n="title">WHOIS 查询</h1>
+            <form id="whois-form" class="mb-4">
+                <div class="flex relative">
+                    <input type="text" id="domain" name="domain" required placeholder="请输入IP或者域名"
+                        data-i18n="[placeholder]inputPlaceholder"
+                        class="flex-grow px-3 py-2 bg-white border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <button type="button" id="clear-input"
+                        class="absolute right-24 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none mr-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <button type="submit" id="submit-btn"
+                        class="flex items-center justify-center w-24 border border-transparent rounded-r-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                        <span data-i18n="search">查询</span>
+                        <svg class="loading-spinner ml-2 h-5 w-5 hidden" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+                                fill="none"></circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+            <div id="resultDiv" class="hidden flex-grow overflow-hidden">
+                <div class="h-full overflow-y-auto result-container pb-16 sm:pb-0">
+                    <div id="importantInfo"></div>
+                    <div id="originalInfo"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="history" class="history-card bg-white shadow-md ml-0 sm:ml-4 hidden sm:flex flex-col">
+            <h2 class="text-lg font-semibold p-4 text-gray-800" data-i18n="recentSearches">最近查询</h2>
+            <div class="flex-grow overflow-y-auto px-4 pb-4">
+                <ul id="history-list" class="space-y-2"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        $(document).ready(function () {
+            const HISTORY_KEY = 'whoisHistory';
+            const MAX_HISTORY = 500;
+
+            const $form = $('#whois-form');
+            const $domain = $('#domain');
+            const $submitBtn = $('#submit-btn');
+            const $resultDiv = $('#resultDiv');
+            const $importantInfo = $('#importantInfo');
+            const $originalInfo = $('#originalInfo');
+            const $historyList = $('#history-list');
+            const $clearInput = $('#clear-input');
+
+            function init() {
+                bindEvents();
+                initClipboard();
+                checkUrlForDomain();
+                updateSearchHistory();
+                toggleClearButton();
+                initI18n();
+            }
+
+            function bindEvents() {
+                $form.submit(handleFormSubmit);
+                $(document).on('click', '.search-again', handleSearchAgain);
+                $(document).on('click', '#saveScreenshot', handleSaveScreenshot);
+                $domain.on('input', toggleClearButton);
+                $clearInput.on('click', clearInput);
+                $(document).on('keydown', handleGlobalKeydown);
+                $('#languageSelect').on('change', handleLanguageChange);
+            }
+
+            function handleFormSubmit(e) {
+                e.preventDefault();
+                const domain = $domain.val().trim();
+                if (domain) performWhoisLookup(domain);
+            }
+
+            function handleSearchAgain() {
+                const domain = $(this).data('domain');
+                performWhoisLookup(domain);
+            }
+
+            function performWhoisLookup(domain) {
+                updateButtonState(true);
+                updateUrl(domain);
+                $domain.val(domain);
+                toggleClearButton();
+
+                $.ajax({
+                    url: 'whois.php',
+                    method: 'GET',
+                    data: { domain },
+                    dataType: 'json',
+                    success: function (response) {
+                        handleWhoisResponse(response);
+                    },
+                    error: handleWhoisError,
+                    complete: () => {
+                        updateButtonState(false);
+                        updateContent();
+                    }
+                });
+            }
+
+            function handleWhoisResponse(response) {
+                if (response.whois) {
+                    const { importantInfoHtml, originalInfoHtml } = formatWhoisInfo(response.whois);
+                    $importantInfo.html(importantInfoHtml);
+                    $originalInfo.html(originalInfoHtml);
+                    $resultDiv.removeClass('hidden');
+                    updateSearchHistory($domain.val().trim());
+                } else if (response.error) {
+                    showError(`错误: ${response.error}`);
+                }
+            }
+
+            function getLabel(key) {
+                return i18next.t(key, { defaultValue: key });
+            }
+
+            function handleWhoisError(jqXHR, textStatus) {
+                showError(`请求失败: ${textStatus}`);
+            }
+
+            function formatWhoisInfo(whoisData) {
+                const whoisLines = whoisData.split('\n');
+                let importantInfo = {};
+
+                // 提取重要信息
+                whoisLines.forEach(line => {
+                    const [key, ...valueParts] = line.split(':');
+                    const value = valueParts.join(':').trim();
+
+                    if (key && value) {
+                        const lowerKey = key.trim().toLowerCase();
+                        switch (lowerKey) {
+                            case '域名':
+                            case 'domain name':
+                            case 'domain':
+                                importantInfo.domainName = value;
+                                break;
+                            case '注册商':
+                            case 'registrar':
+                            case 'sponsoring registrar':
+                                importantInfo.registrar = value;
+                                break;
+                            case 'whois server':
+                                importantInfo.whoisServer = value;
+                                break;
+                            case '更新日':
+                            case 'updated date':
+                                importantInfo.updatedDate = value;
+                                break;
+                            case '注册日':
+                            case 'creation date':
+                            case 'registration time':
+                                importantInfo.creationDate = value;
+                                break;
+                            case 'registry expiry date':
+                            case 'expiration time':
+                                importantInfo.expiryDate = value;
+                                break;
+                            case 'iana_id':
+                                importantInfo.ianaId = value;
+                                break;
+                            case '状态':
+                            case 'domain status':
+                            case 'status':
+                                importantInfo.status = value.split(' ').join("<br>");
+                                break;
+                            case 'name server':
+                            case 'ns':
+                                importantInfo.nameServers = importantInfo.nameServers ? importantInfo.nameServers + '<br>' + value : value;
+                                break;
+                            case 'dnssec':
+                                importantInfo.dnssec = value;
+                                break;
+                            case '注册人':
+                            case 'registrant':
+                                importantInfo.registrant = value;
+                                break;
+                            case '注册人邮箱':
+                            case 'registrant contact email':
+                                importantInfo.registrantEmail = value;
+                                break;
+                        }
+                    }
+                });
+
+                const registrationPeriod = calculatePeriod(importantInfo.creationDate, 'registrationPeriod');
+                const remainingTime = calculatePeriod(importantInfo.expiryDate, 'remainingTime');
+
+                // 生成重要信息HTML
+                let importantInfoHtml = `
+                    <div id="importantInfoCard" class="bg-blue-50 rounded-lg p-2 sm:p-4 mb-4 sm:mb-6 relative">
+                        <div class="flex justify-between items-center mb-2 sm:mb-3">
+                            <h3 class="text-lg font-bold text-blue-700" data-i18n="whoisOverview">WHOIS 信息概览</h3>
+                            <button id="saveScreenshot" class="text-blue-600 hover:text-blue-800 focus:outline-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="space-y-2">
+                            ${Object.entries(importantInfo).map(([key, value]) => `
+                                <div class="flex flex-col sm:flex-row">
+                                    <span class="text-gray-600 font-semibold sm:w-32 sm:flex-shrink-0 sm:text-right sm:pr-2" data-i18n="${key}">${getLabel(key)}：</span>
+                                    <span class="text-gray-800 break-words sm:flex-grow flex items-center">
+                                        ${value}
+                                        ${key === 'domainName' ? registrationPeriod : ''}
+                                        ${key === 'expiryDate' ? remainingTime : ''}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                // 生成原始信息的HTML
+                let originalInfoHtml = `
+                    <div class="bg-gray-50 rounded-lg p-2 sm:p-4">
+                        <div class="flex justify-between items-center mb-2 sm:mb-3">
+                            <h3 class="text-lg font-bold text-gray-700" data-i18n="originalWhois">WHOIS 原始信息</h3>
+                            <button id="copyOriginalInfo" class="text-blue-600 hover:text-blue-800 focus:outline-none" data-clipboard-target="#originalInfoContent">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                        </div>
+                        <pre id="originalInfoContent" class="whitespace-pre-wrap text-sm break-words">${whoisData}</pre>
+                    </div>
+                `;
+
+                return { importantInfoHtml, originalInfoHtml };
+            }
+
+            function calculatePeriod(dateString, type) {
+                if (!dateString) return '';
+
+                const date = new Date(dateString);
+                const currentDate = new Date();
+                const diffTime = Math.abs(type === 'remainingTime' ? date - currentDate : currentDate - date);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let time, unit;
+                if (diffDays >= 365) {
+                    time = Math.floor(diffDays / 365);
+                    unit = 'years';
+                } else if (diffDays >= 30) {
+                    time = Math.floor(diffDays / 30);
+                    unit = 'months';
+                } else {
+                    time = diffDays;
+                    unit = 'days';
+                }
+
+                return `<span class="inline-flex items-center justify-center text-xs text-white bg-${type === 'remainingTime' ? 'green' : 'blue'}-600 rounded px-1 ml-1 align-middle" style="height: 1.5em; line-height: 1;" data-i18n="${type}" data-time="${time}" data-unit="${unit}"></span>`;
+            }
+
+            function updateSearchHistory(domain) {
+                let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+                if (domain?.trim()) {
+                    history = [domain, ...history.filter(item => item !== domain)].slice(0, MAX_HISTORY);
+                    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+                }
+                renderHistory(history);
+            }
+
+            function renderHistory(history) {
+                const historyHtml = history.length
+                    ? history.map(item => `
+                        <li class="bg-gray-50 p-2 rounded-md">
+                            <span class="text-xs sm:text-sm text-gray-600 block mb-1">${item}</span>
+                            <button class="search-again text-xs text-indigo-600 hover:text-indigo-800" data-domain="${item}" data-i18n="searchAgain">再次查询</button>
+                        </li>
+                    `).join('')
+                    : `<li class="text-xs sm:text-sm text-gray-500 text-center" data-i18n="noHistory">暂无历史查询记录</li>`;
+                $historyList.html(historyHtml);
+            }
+
+            function updateButtonState(isLoading) {
+                const $submitText = $submitBtn.find('span');
+                const $spinner = $submitBtn.find('svg');
+                $submitBtn.prop('disabled', isLoading)
+                    .toggleClass('bg-indigo-600 hover:bg-indigo-700 text-white', !isLoading)
+                    .toggleClass('bg-gray-300 text-gray-800', isLoading);
+                $submitText.data('data-i18n', isLoading ? 'searching' : 'search');
+                $spinner.toggleClass('hidden', !isLoading);
+            }
+
+            function updateUrl(domain) {
+                if (domain) {
+                    history.pushState(null, '', '/' + encodeURIComponent(domain));
+                }
+            }
+
+            function showError(message) {
+                $importantInfo.html('');
+                $originalInfo.html(`<p class="text-red-500">${message}</p>`);
+                $resultDiv.removeClass('hidden');
+            }
+
+            function showToast(message, duration = 3000) {
+                const toast = $('#toast');
+                toast.text(i18next.t(message)).css('opacity', 1);
+                setTimeout(() => {
+                    toast.css('opacity', 0);
+                }, duration);
+            }
+
+            function initClipboard() {
+                new ClipboardJS('#copyOriginalInfo', {
+                    text: function () {
+                        return $('#originalInfoContent').text();
+                    }
+                }).on('success', function () {
+                    showToast('copiedToClipboard');
+                }).on('error', function () {
+                    showToast('copyFailed');
+                });
+            }
+
+            function handleSaveScreenshot() {
+                const element = document.getElementById('importantInfoCard');
+                const currentDomain = window.location.hostname;
+                const currentQueryDomain = $('#domain').val().trim();
+                const $saveScreenshotBtn = $('#saveScreenshot');
+
+                // 临时隐藏截图按钮
+                $saveScreenshotBtn.hide();
+
+                // 使用 dom-to-image 进行截图
+                domtoimage.toPng(element, {
+                    quality: 1,
+                    bgcolor: '#ffffff'
+                })
+                    .then(function (dataUrl) {
+                        // 创建一个临时的 canvas 元素来添加水印
+                        const img = new Image();
+                        img.onload = function () {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+
+                            // 绘制原始图像
+                            ctx.drawImage(img, 0, 0);
+
+                            // 添加水印
+                            ctx.font = '12px Arial';
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                            const watermarkText = '© ' + new Date().getFullYear() + ' ' + currentDomain;
+                            const textWidth = ctx.measureText(watermarkText).width;
+                            ctx.fillText(watermarkText, canvas.width - textWidth - 10, canvas.height - 10);
+
+                            // 创建下载链接
+                            const link = document.createElement('a');
+                            link.download = `whois_${currentQueryDomain}.png`;
+                            link.href = canvas.toDataURL('image/png');
+                            link.click();
+
+                            // 截图完成后显示截图按钮
+                            $saveScreenshotBtn.show();
+                        };
+                        img.src = dataUrl;
+                    })
+                    .catch(function (error) {
+                        console.error('截图失败:', error);
+                        showToast('screenshotFailed');
+                        // 发生错误时也要显示截图按钮
+                        $saveScreenshotBtn.show();
+                    });
+            }
+
+            function checkUrlForDomain() {
+                const path = window.location.pathname;
+                const domain = decodeURIComponent(path.substring(1)); // 移除开头的斜杠
+                if (domain) {
+                    $domain.val(domain);
+                    performWhoisLookup(domain);
+                }
+            }
+
+            function toggleClearButton() {
+                $clearInput.toggle(!!$domain.val());
+            }
+
+            function clearInput() {
+                $domain.val('').focus();
+                toggleClearButton();
+            }
+
+            function handleGlobalKeydown(e) {
+                if (e.key === 'Delete') {
+                    e.preventDefault();
+                    clearInput();
+                }
+            }
+
+            function initI18n() {
+                const userLang = navigator.language || navigator.userLanguage; // 获取浏览器语言
+                const defaultLang = ['zh-CN', 'zh-TW', 'en', 'ru', 'es'].includes(userLang) ? userLang : 'zh-CN'; // 检查是否支持该语言，不支持则默认 'zh-CN'
+
+                i18next.init({
+                    lng: defaultLang, // 根据浏览器语言设置默认语言
+                    resources: {
+                        'zh-CN': {
+                            translation: {
+                                'title': 'WHOIS 查询',
+                                'inputPlaceholder': '请输入IP或者域名',
+                                'search': '查询',
+                                'searching': '查询中',
+                                'recentSearches': '最近查询',
+                                'noHistory': '暂无历史查询记录',
+                                'searchAgain': '再次查询',
+                                'whoisOverview': 'WHOIS 信息概览',
+                                'originalWhois': 'WHOIS 原始信息',
+                                'copyButton': '复制',
+                                'screenshotButton': '截图',
+                                'copiedToClipboard': '原始信息已复制到剪贴板',
+                                'copyFailed': '复制失败，请手动复制',
+                                'screenshotFailed': '截图失败，请稍后重试',
+                                'domainName': '域名',
+                                'registrar': '注册商',
+                                'whoisServer': 'WHOIS 服务器',
+                                'updatedDate': '更新日',
+                                'creationDate': '注册日',
+                                'expiryDate': '过期日',
+                                'remainingTime': '剩余 {{time}} {{unit}}',
+                                'registrationPeriod': '{{time}} {{unit}}',
+                                'years': '年',
+                                'months': '个月',
+                                'days': '天',
+                                'status': '状态',
+                                'nameServers': '域名服务器',
+                                'dnssec': 'DNSSEC',
+                                'registrant': '注册人',
+                                'registrantEmail': '注册人邮箱',
+                                'error': '错误: {message}',
+                                'requestFailed': '请求失败: {status}'
+                            }
+                        },
+                        'zh-TW': {
+                            translation: {
+                                'title': 'WHOIS 查詢',
+                                'inputPlaceholder': '請輸入IP或者域名',
+                                'search': '查詢',
+                                'searching': '查詢中',
+                                'recentSearches': '最近查詢',
+                                'noHistory': '暫無歷史查詢記錄',
+                                'searchAgain': '再次查詢',
+                                'whoisOverview': 'WHOIS 信息概覽',
+                                'originalWhois': 'WHOIS 原始信息',
+                                'copyButton': '複製',
+                                'screenshotButton': '截圖',
+                                'copiedToClipboard': '原始信息已複製到剪貼板',
+                                'copyFailed': '複製失敗，請手動複製',
+                                'screenshotFailed': '截圖失敗，請稍後重試',
+                                'domainName': '域名',
+                                'registrar': '註冊商',
+                                'whoisServer': 'WHOIS 伺服器',
+                                'updatedDate': '更新日',
+                                'creationDate': '註冊日',
+                                'expiryDate': '過期日',
+                                'remainingTime': '剩餘 {{time}} {{unit}}',
+                                'registrationPeriod': '{{time}} {{unit}}',
+                                'years': '年',
+                                'months': '個月',
+                                'days': '天',
+                                'status': '狀態',
+                                'nameServers': '域名伺服器',
+                                'dnssec': 'DNSSEC',
+                                'registrant': '註冊人',
+                                'registrantEmail': '註冊人郵箱',
+                                'error': '錯誤: {message}',
+                                'requestFailed': '請求失敗: {status}'
+                            }
+                        },
+                        'en': {
+                            translation: {
+                                'title': 'WHOIS Lookup',
+                                'inputPlaceholder': 'Enter IP or domain name',
+                                'search': 'Search',
+                                'searching': 'Searching',
+                                'recentSearches': 'Recent Searches',
+                                'noHistory': 'No search history',
+                                'searchAgain': 'Search Again',
+                                'whoisOverview': 'WHOIS Information Overview',
+                                'originalWhois': 'Original WHOIS Information',
+                                'copyButton': 'Copy',
+                                'screenshotButton': 'Screenshot',
+                                'copiedToClipboard': 'Original information copied to clipboard',
+                                'copyFailed': 'Copy failed, please copy manually',
+                                'screenshotFailed': 'Screenshot failed, please try again later',
+                                'domainName': 'Domain Name',
+                                'registrar': 'Registrar',
+                                'whoisServer': 'WHOIS Server',
+                                'updatedDate': 'Updated Date',
+                                'creationDate': 'Creation Date',
+                                'expiryDate': 'Expiry Date',
+                                'remainingTime': '{{time}} {{unit}} remaining',
+                                'registrationPeriod': '{{time}} {{unit}}',
+                                'years': 'years',
+                                'months': 'months',
+                                'days': 'days',
+                                'status': 'Status',
+                                'nameServers': 'Name Servers',
+                                'dnssec': 'DNSSEC',
+                                'registrant': 'Registrant',
+                                'registrantEmail': 'Registrant Email',
+                                'error': 'Error: {message}',
+                                'requestFailed': 'Request failed: {status}'
+                            }
+                        },
+                        'ru': {
+                            translation: {
+                                'title': 'WHOIS Поиск',
+                                'inputPlaceholder': 'Введите IP или доменное имя',
+                                'search': 'Поиск',
+                                'searching': 'Поиск...',
+                                'recentSearches': 'Недавние запросы',
+                                'noHistory': 'Нет истории поиска',
+                                'searchAgain': 'Искать снова',
+                                'whoisOverview': 'Обзор информации WHOIS',
+                                'originalWhois': 'Оригинальная информация WHOIS',
+                                'copyButton': 'Копировать',
+                                'screenshotButton': 'Скриншот',
+                                'copiedToClipboard': 'Оригинальная информация скопирована в буфер обмена',
+                                'copyFailed': 'Не удалось скопировать, пожалуйста, скопируйте вручную',
+                                'screenshotFailed': 'Не удалось сделать скриншот, попробуйте позже',
+                                'domainName': 'Доменное имя',
+                                'registrar': 'Регистратор',
+                                'whoisServer': 'WHOIS сервер',
+                                'updatedDate': 'Дата обновления',
+                                'creationDate': 'Дата создания',
+                                'expiryDate': 'Дата истечения',
+                                'remainingTime': 'Осталось {{time}} {{unit}}',
+                                'registrationPeriod': '{{time}} {{unit}}',
+                                'years': 'лет',
+                                'months': 'месяцев',
+                                'days': 'дней',
+                                'status': 'Статус',
+                                'nameServers': 'Имена серверов',
+                                'dnssec': 'DNSSEC',
+                                'registrant': 'Регистрант',
+                                'registrantEmail': 'Email регистранта',
+                                'error': 'Ошибка: {message}',
+                                'requestFailed': 'Запрос не выполнен: {status}'
+                            }
+                        },
+                        'es': {
+                            translation: {
+                                'title': 'Consulta WHOIS',
+                                'inputPlaceholder': 'Ingrese IP o nombre de dominio',
+                                'search': 'Buscar',
+                                'searching': 'Buscando...',
+                                'recentSearches': 'Búsquedas recientes',
+                                'noHistory': 'No hay historial de búsqueda',
+                                'searchAgain': 'Buscar de nuevo',
+                                'whoisOverview': 'Resumen de información WHOIS',
+                                'originalWhois': 'Información original de WHOIS',
+                                'copyButton': 'Copiar',
+                                'screenshotButton': 'Captura de pantalla',
+                                'copiedToClipboard': 'Información original copiada al portapapeles',
+                                'copyFailed': 'Error al copiar, por favor copie manualmente',
+                                'screenshotFailed': 'Error al tomar captura de pantalla, intente nuevamente más tarde',
+                                'domainName': 'Nombre de dominio',
+                                'registrar': 'Registrador',
+                                'whoisServer': 'Servidor WHOIS',
+                                'updatedDate': 'Fecha de actualización',
+                                'creationDate': 'Fecha de creación',
+                                'expiryDate': 'Fecha de expiración',
+                                'remainingTime': '{{time}} {{unit}} restantes',
+                                'registrationPeriod': '{{time}} {{unit}}',
+                                'years': 'años',
+                                'months': 'meses',
+                                'days': 'días',
+                                'status': 'Estado',
+                                'nameServers': 'Servidores de nombres',
+                                'dnssec': 'DNSSEC',
+                                'registrant': 'Registrante',
+                                'registrantEmail': 'Email del registrante',
+                                'error': 'Error: {message}',
+                                'requestFailed': 'Solicitud fallida: {status}'
+                            }
+                        }
+                    }
+                }, function (err, t) {
+                    updateContent();
+                });
+            }
+
+            function updateContent() {
+                // 更新其他内容的翻译
+                $('[data-i18n]').each(function () {
+                    const $this = $(this);
+                    const key = $this.data('i18n');
+                    if (key === 'remainingTime' || key === 'registrationPeriod') {
+                        const time = $this.data('time');
+                        const unit = $this.data('unit');
+                        $this.html(i18next.t(key, { time: time, unit: i18next.t(unit) }));
+                    } else if (key.includes('[placeholder]')) {
+                        // 特殊处理 placeholder 属性
+                        const placeholderKey = key.replace('[placeholder]', '');
+                        $this.attr('placeholder', i18next.t(placeholderKey));
+                    } else {
+                        $this.text(i18next.t(key));
+                    }
+                });
+            }
+
+            function handleLanguageChange() {
+                i18next.changeLanguage(this.value, function () {
+                    updateContent();
+                });
+            }
+
+            init();
+        });
+    </script>
+</body>
+
+</html>
