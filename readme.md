@@ -40,7 +40,7 @@ This file contains information about numerous Top-Level Domains (TLDs) and their
 
 1. 克隆仓库 / Clone the repository:
    ```
-   git clone https://github.com/yourusername/whois-lookup-tool.git
+   git clone https://github.com/tsymq-live/php-whois.git
    ```
 
 2. 将文件放置在您的 Web 服务器目录中 / Place the files in your web server directory.
