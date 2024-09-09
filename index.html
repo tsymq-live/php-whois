@@ -284,16 +284,16 @@
                                 break;
                             case '更新日':
                             case 'updated date':
-                                importantInfo.updatedDate = value;
+                                importantInfo.updatedDate = convertToUTC8(value);
                                 break;
                             case '注册日':
                             case 'creation date':
                             case 'registration time':
-                                importantInfo.creationDate = value;
+                                importantInfo.creationDate = convertToUTC8(value);
                                 break;
                             case 'registry expiry date':
                             case 'expiration time':
-                                importantInfo.expiryDate = value;
+                                importantInfo.expiryDate = convertToUTC8(value);
                                 break;
                             case 'iana_id':
                                 importantInfo.ianaId = value;
@@ -367,6 +367,16 @@
                 `;
 
                 return { importantInfoHtml, originalInfoHtml };
+            }
+
+            // 添加这个新函数来转换时间为 UTC+8
+            function convertToUTC8(dateString) {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    return dateString; // 如果日期无效，返回原始字符串
+                }
+                const utc8Date = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+                return utc8Date.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, ' (UTC+8)');
             }
 
             function calculatePeriod(dateString, type) {
